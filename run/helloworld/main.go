@@ -19,15 +19,24 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+
+	"go.opentelemetry.io/contrib/detectors/gcp"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 func main() {
 	log.Print("starting server...")
-	http.HandleFunc("/", handler)
+	initTracer()
+	http.Handle("/", otelhttp.NewHandler(&baseHandler{}, "helloworld"))
 
 	// Determine port for HTTP service.
 	port := os.Getenv("PORT")
@@ -43,7 +52,35 @@ func main() {
 	}
 }
 
-func handler(w http.ResponseWriter, r *http.Request) {
+// initTracer creates and registers trace provider instance.
+func initTracer() {
+	var err error
+	// Keep things simple by using a standard out exporter
+	exp, err := stdouttrace.New()
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	bsp := sdktrace.NewBatchSpanProcessor(exp)
+	resource, err := resource.New(context.Background(),
+		// Detect resource information from cloud run detector
+		resource.WithDetectors(gcp.NewCloudRun()),
+	)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		sdktrace.WithSpanProcessor(bsp),
+		sdktrace.WithResource(resource),
+	)
+	otel.SetTracerProvider(tp)
+}
+
+type baseHandler struct{}
+
+func (*baseHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	name := os.Getenv("NAME")
 	if name == "" {
 		name = "World"
