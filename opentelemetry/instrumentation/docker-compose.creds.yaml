@@ -11,6 +11,14 @@
 version: "3"
 
 services:
+  app:
+    # If the app does not have permission to read the mounted volumes, set
+    # USERID=$(id -u) to run the container as the current user
+    user: $USERID
+    volumes:
+      - ${GOOGLE_APPLICATION_CREDENTIALS?}:${GOOGLE_APPLICATION_CREDENTIALS}:ro
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS
   otelcol:
     # If the collector does not have permission to read the mounted volumes, set
     # USERID=$(id -u) to run the container as the current user

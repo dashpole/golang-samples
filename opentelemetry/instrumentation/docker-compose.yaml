@@ -4,8 +4,11 @@ services:
   app:
     build: ./app
     environment:
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otelcol:4318
+      - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=https://telemetry.googleapis.com
+      - OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://otelcol:4318
       - OTEL_SERVICE_NAME=otel-quickstart-go
+      - OTEL_RESOURCE_ATTRIBUTES=gcp.project_id=${GOOGLE_CLOUD_PROJECT?}
+      - OTEL_EXPORTER_OTLP_TRACES_HEADERS=x-goog-user-project=${GOOGLE_CLOUD_PROJECT?}
       - OTEL_GO_X_EXEMPLAR=true
       - OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION=BASE2_EXPONENTIAL_BUCKET_HISTOGRAM
     volumes:
